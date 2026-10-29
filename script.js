@@ -41,6 +41,16 @@ const statusToast = document.getElementById("status");
 const themeToggle = document.getElementById("themeToggle");
 const themeLabel = document.getElementById("themeLabel");
 
+// Mobile & Fallback Paste Modal Elements
+const pasteModal = document.getElementById("pasteModal");
+const closePasteModalBtn = document.getElementById("closePasteModalBtn");
+const cancelPasteModalBtn = document.getElementById("cancelPasteModalBtn");
+const applyPasteModalBtn = document.getElementById("applyPasteModalBtn");
+const applyAndDecryptBtn = document.getElementById("applyAndDecryptBtn");
+const modalPasteInput = document.getElementById("modalPasteInput");
+const modalCharCount = document.getElementById("modalCharCount");
+const modalFormatBadge = document.getElementById("modalFormatBadge");
+
 // State
 let rawDecryptedJson = "";
 let parsedJsonObject = null;
@@ -381,23 +391,134 @@ async function copyOutput() {
 }
 
 /**
- * Paste from Clipboard
+ * Paste Modal Lifecycle & Mobile Support
+ */
+function openPasteModal() {
+  if (!pasteModal || !modalPasteInput) return;
+
+  modalPasteInput.value = "";
+  if (modalCharCount) modalCharCount.textContent = "0 characters";
+  if (modalFormatBadge) {
+    modalFormatBadge.textContent = "Awaiting paste";
+    modalFormatBadge.className = "modal-meta-badge";
+  }
+  if (applyPasteModalBtn) applyPasteModalBtn.disabled = true;
+  if (applyAndDecryptBtn) applyAndDecryptBtn.disabled = true;
+
+  pasteModal.style.display = "flex";
+  void pasteModal.offsetWidth; // Force layout reflow for animation
+  pasteModal.classList.add("active");
+  pasteModal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+
+  // Focus modal textarea so mobile keyboard / clipboard suggestion appears
+  setTimeout(() => {
+    modalPasteInput.focus();
+  }, 120);
+}
+
+function closePasteModal() {
+  if (!pasteModal) return;
+
+  pasteModal.classList.remove("active");
+  pasteModal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
+
+  setTimeout(() => {
+    pasteModal.style.display = "none";
+  }, 220);
+}
+
+function updateModalStats() {
+  if (!modalPasteInput) return;
+  const val = modalPasteInput.value;
+  const count = val.length;
+
+  if (modalCharCount) {
+    modalCharCount.textContent = `${count.toLocaleString()} character${count === 1 ? "" : "s"}`;
+  }
+
+  const hasContent = count > 0;
+  if (applyPasteModalBtn) applyPasteModalBtn.disabled = !hasContent;
+  if (applyAndDecryptBtn) applyAndDecryptBtn.disabled = !hasContent;
+
+  if (modalFormatBadge) {
+    if (!hasContent) {
+      modalFormatBadge.textContent = "Awaiting paste";
+      modalFormatBadge.className = "modal-meta-badge";
+    } else if (val.includes("%")) {
+      modalFormatBadge.textContent = "URL-Encoded";
+      modalFormatBadge.className = "modal-meta-badge badge-accent";
+    } else {
+      modalFormatBadge.textContent = "Base64";
+      modalFormatBadge.className = "modal-meta-badge badge-success";
+    }
+  }
+}
+
+function applyModalPaste(autoDecrypt = false) {
+  if (!modalPasteInput) return;
+
+  const text = modalPasteInput.value.trim();
+  if (!text) {
+    showToast("Please paste your ciphertext first", "error");
+    modalPasteInput.focus();
+    return;
+  }
+
+  payloadInput.value = text;
+  updateInputStats();
+  closePasteModal();
+
+  if (autoDecrypt) {
+    showToast("Pasted payload. Decrypting…", "success");
+    decryptPayload();
+  } else {
+    showToast("Payload pasted successfully", "success");
+    payloadInput.focus();
+  }
+}
+
+/**
+ * Paste from Clipboard (Robust cross-platform & mobile support)
  */
 async function pasteFromClipboard() {
+  // 1. Try modern Asynchronous Clipboard API (works on HTTPS / localhost)
+  if (navigator.clipboard && typeof navigator.clipboard.readText === "function") {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && text.trim()) {
+        payloadInput.value = text.trim();
+        updateInputStats();
+        showToast("Pasted payload from clipboard", "success");
+        payloadInput.focus();
+        return;
+      } else if (text !== undefined && text.trim() === "") {
+        showToast("Clipboard is empty", "error");
+        return;
+      }
+    } catch (err) {
+      console.warn("Async clipboard readText rejected or blocked:", err);
+      // Fall through to fallback
+    }
+  }
+
+  // 2. Try document.execCommand('paste') fallback
   try {
-    const text = await navigator.clipboard.readText();
-    if (text) {
-      payloadInput.value = text;
+    payloadInput.focus();
+    payloadInput.select();
+    const successful = document.execCommand("paste");
+    if (successful && payloadInput.value.trim()) {
       updateInputStats();
       showToast("Pasted payload from clipboard", "success");
-      payloadInput.focus();
-    } else {
-      showToast("Clipboard is empty", "error");
+      return;
     }
   } catch {
-    payloadInput.focus();
-    showToast("Press Ctrl+V / Cmd+V to paste into the field", "error");
+    // execCommand fallback restricted in modern browsers; fall through
   }
+
+  // 3. Mobile / Insecure context / Permission-denied Fallback: Open friendly bottom sheet
+  openPasteModal();
 }
 
 
@@ -514,6 +635,33 @@ payloadInput.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
     e.preventDefault();
     decryptPayload();
+  }
+});
+
+// Modal Event Listeners
+closePasteModalBtn?.addEventListener("click", closePasteModal);
+cancelPasteModalBtn?.addEventListener("click", closePasteModal);
+applyPasteModalBtn?.addEventListener("click", () => applyModalPaste(false));
+applyAndDecryptBtn?.addEventListener("click", () => applyModalPaste(true));
+
+modalPasteInput?.addEventListener("input", updateModalStats);
+modalPasteInput?.addEventListener("paste", () => setTimeout(updateModalStats, 50));
+modalPasteInput?.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    e.preventDefault();
+    applyModalPaste(true);
+  }
+});
+
+pasteModal?.addEventListener("click", (e) => {
+  if (e.target === pasteModal) {
+    closePasteModal();
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && pasteModal?.classList.contains("active")) {
+    closePasteModal();
   }
 });
 
