@@ -447,19 +447,23 @@ html[data-theme="dark"] .moon-icon {
   padding: 0 16px;
   background: var(--bg-surface-raised);
   border-bottom: 1px solid var(--border);
+  gap: 10px;
 }
 
 .panel-title-group {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .panel-icon {
+  flex-shrink: 0;
   color: var(--text-muted);
 }
 
 .panel-icon-accent {
+  flex-shrink: 0;
   color: var(--primary);
 }
 
@@ -469,6 +473,9 @@ html[data-theme="dark"] .moon-icon {
   font-weight: 600;
   letter-spacing: -0.2px;
   color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .badge {
@@ -481,6 +488,8 @@ html[data-theme="dark"] .moon-icon {
   background: var(--bg-surface);
   color: var(--text-secondary);
   border: 1px solid var(--border);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .badge-subtle {
@@ -499,6 +508,7 @@ html[data-theme="dark"] .moon-icon {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 /* ==========================================================================
@@ -891,6 +901,24 @@ html[data-theme="dark"] .moon-icon {
   }
 }
 
+/* Intermediate Small Screens */
+@media (max-width: 640px) {
+  .panel-header {
+    height: 46px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .panel-actions {
+    gap: 4px;
+  }
+
+  .btn-sm {
+    padding: 6px 9px;
+    font-size: 12px;
+  }
+}
+
 /* Mobile Screens */
 @media (max-width: 540px) {
   .topbar {
@@ -910,12 +938,37 @@ html[data-theme="dark"] .moon-icon {
   }
 
   .workbench {
-    padding: 10px 14px 20px;
+    padding: 10px 12px 20px;
     gap: 12px;
   }
 
   .panel {
-    height: 420px;
+    height: 440px;
+  }
+
+  .panel-header {
+    height: 46px;
+    padding: 0 10px;
+  }
+
+  /* Critical Mobile Fix: Collapse secondary text labels to icons so Copy JSON button is fully visible */
+  #formatBtn span,
+  #downloadBtn span {
+    display: none;
+  }
+
+  #formatBtn,
+  #downloadBtn {
+    padding: 6px 9px;
+    min-height: 32px;
+  }
+
+  /* Keep Copy JSON button prominent, unclipped, and easy to tap */
+  #copyBtn {
+    padding: 6px 12px;
+    min-height: 32px;
+    flex-shrink: 0;
+    font-weight: 600;
   }
 
   .keyboard-tip {
@@ -924,6 +977,34 @@ html[data-theme="dark"] .moon-icon {
 
   .panel-footer {
     padding: 0 12px;
+  }
+}
+
+/* Extra Small Phones */
+@media (max-width: 380px) {
+  .workbench {
+    padding: 8px 8px 16px;
+  }
+
+  .panel-header {
+    padding: 0 8px;
+  }
+
+  /* Hide badge on extra narrow screens so title and buttons never wrap or overflow */
+  .panel-title-group .badge {
+    display: none;
+  }
+
+  .panel-title {
+    font-size: 12px;
+  }
+
+  #copyBtn {
+    padding: 6px 8px;
+  }
+
+  #copyBtnText {
+    font-size: 11px;
   }
 }
 
