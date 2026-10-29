@@ -1,0 +1,35 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AES Payload Decryptor</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <main class="container">
+    <h1>AES Payload Decryptor</h1>
+    <p class="subtitle">Decrypt URL-encoded AES payloads into readable JSON.</p>
+
+    <label for="payload">Encrypted Payload</label>
+    <textarea id="payload" placeholder="Paste your encrypted payload here..."></textarea>
+
+    <div class="actions">
+      <button id="decryptBtn">Decrypt Payload</button>
+      <button id="clearBtn" class="secondary">Clear</button>
+    </div>
+
+    <p id="status" role="status"></p>
+
+    <div class="result-header">
+      <label for="output">Decrypted Output</label>
+      <button id="copyBtn" class="secondary">Copy JSON</button>
+    </div>
+
+    <pre id="output">Your decrypted JSON will appear here.</pre>
+  </main>
+</body>
+</html>
